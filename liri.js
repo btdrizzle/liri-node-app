@@ -1,10 +1,14 @@
 require("dotenv").config();
-const keys = require("./keys");
-//const spotify = new Spotify(keys.spotify);
 const fs = require('fs');
-var inquirer = require('inquirer');
-var moment = require('moment');
-var bandsintown = require('bandsintown')(process.env.BANDS_IN_TOWN);
+const inquirer = require('inquirer');
+const moment = require('moment');
+const bandsintown = require('bandsintown')(process.env.BANDS_IN_TOWN);
+const Spotify = require('node-spotify-api');
+const spotify = new Spotify({
+    id: process.env.SPOTIFY_ID,
+    secret: process.env.SPOTIFY_SECRET
+  });
+const omdb = require('omdb-client');
 
 switch(process.argv[2]) {
     case "concert-this":  
@@ -15,7 +19,8 @@ switch(process.argv[2]) {
             {
             type: "input",
             message: "For which artist/band do you want to see events?",
-            name: "artist"
+            name: "artist",
+            default: "Drake"
             },
             
         ])
@@ -33,13 +38,66 @@ switch(process.argv[2]) {
             });
 
         });
-        
         break;
     case "spotify-this-song":
-        let songName = process.argv[3];
+        inquirer
+        .prompt([
+            // Here we create a basic text prompt.
+            {
+            type: "input",
+            message: "For which song do you want to search?",
+            name: "song",
+            default: "The Sign Ace of Base"
+            },
+            
+        ])
+            .then(function(inquirerResponse) {
+                spotify
+            .search({ type: 'track', query: inquirerResponse.song, limit: 2 })
+            .then(function(response) {
+            //  console.log(response.tracks.items)
+                searchNum = 1;
+                response.tracks.items.forEach(item => {
+                    console.log(`Search result number ${searchNum}`)
+                    console.log(`Artist name: ${item.album.artists[0].name}`);
+                    console.log(`Song Name: ${item.name}`);
+                    console.log(`Preview Link: ${item.preview_url}`);
+                    console.log(`Album: ${item.album.name}`);
+                    console.log("====================");
+                    searchNum++;
+              })
+            })
+            .catch(function(err) {
+                console.log(err);
+            });
+        });
         break;
+        
     case "movie-this":
-        let movieName = process.argv[3];
+        inquirer
+        .prompt([
+            {
+                type: "input",
+                message: "For which movie do you want to search?",
+                name: "movie",
+                default: "Mr. Nobody"
+                },
+
+        ])
+        .then(function(inquirerResponse) {
+            omdb.get({ apiKey: process.env.OMDB_KEY,title: inquirerResponse.movie,plot:'full',incTomatoes:true},function(err, movie) {
+                if(err) {
+                    return console.error(err);
+                }
+                console.log(`Movie: ${movie.Title}`); 
+                console.log(`Released: ${movie.Released}`);
+                console.log(`IMDB Rating: ${movie.imdbRating}`);
+                console.log(`Country: ${movie.Country}`);
+                console.log(`Rotten Tomatoes Rating: ${movie.tomatoRating}`);
+                console.log(`Actors: ${movie.Actors}`);
+                console.log(`Full Plot: ${movie.Plot}`);
+            });
+        });
         break;
     case "do-what-it-says":
 
